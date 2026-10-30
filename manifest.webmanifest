@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "Nicko Assistant",
+  "short_name": "Nicko",
+  "description": "Seu assistente pessoal para organizar o dia.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1321",
+  "theme_color": "#101b2d",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
