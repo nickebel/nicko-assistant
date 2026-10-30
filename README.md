@@ -1,25 +1,25 @@
 # Nicko Assistant
 
-Aplicativo web instalável (PWA), em português, pensado para uso no celular.
+Aplicativo web instalável (PWA) em português, pensado para o celular.
 
-## O que funciona nesta versão
-- Painel com data e saudação.
-- Previsão atual do tempo e máximas/mínimas via Open-Meteo, para São Miguel dos Campos (AL).
-- Resumo local dos horários de trabalho informados: segunda a sexta, 07h–12h e 13h–17h; sábado, 07h–12h.
-- Lista de tarefas salva no armazenamento local do navegador.
-- Botão para copiar um resumo do dia e colar no ChatGPT.
-- Atalhos para Google Agenda, ChatGPT e notícias.
-- Cache básico para abrir a interface offline depois da primeira visita.
+## Recursos do painel
+- Visão diária, clima e agenda de trabalho informada pelo usuário.
+- Lista de tarefas salva no navegador.
+- Interface de conversa dentro do próprio aplicativo.
+- Boletim de notícias por tema: geral, Brasil, mundo, Alagoas e tecnologia.
+- Pesquisa na web com links de fontes e leitura das respostas em voz alta, quando o navegador oferece suporte.
 
-## Limitações conhecidas
-- O painel de trabalho não lê eventos da conta Google; ele apenas apresenta os horários informados e oferece um atalho ao Google Agenda.
-- Notícias abrem páginas externas; não existe resumo automático de manchetes nesta versão.
-- O ChatGPT abre em outra aba ou no aplicativo; não há API de IA integrada.
-- O aplicativo não executa tarefas em segundo plano às 05h nem garante notificações agendadas.
-- Tarefas ficam salvas apenas no navegador/aparelho atual.
+## Ativar o assistente e o boletim de notícias
+O site é estático e não pode guardar credenciais secretas. Para ativar a IA, publique `cloudflare-worker.js` como Cloudflare Worker e configure os segredos `OPENAI_API_KEY` e `NICKO_ACCESS_CODE`. Depois, informe o endereço do Worker e o código de acesso na aba Assistente do aplicativo.
 
-## Publicação
-O site pode ser hospedado gratuitamente no GitHub Pages. Depois de publicado em HTTPS, abra no Chrome ou Samsung Internet e escolha no menu do navegador **Adicionar à tela inicial** ou **Instalar aplicativo**.
+Consulte [CONFIGURAR-IA.md](./CONFIGURAR-IA.md) para o passo a passo completo.
+
+## Limitações
+- A API da OpenAI tem faturamento separado da assinatura ChatGPT.
+- Agenda exibida é um resumo dos horários informados; ainda não sincroniza diretamente com o Google Agenda.
+- Tarefas ficam neste navegador/aparelho.
+- Notícias e conversa inteligente só funcionam depois de configurar o serviço Worker.
+- O aplicativo não executa monitoramento contínuo nem boletins garantidos em segundo plano às 05h.
 
 ## Privacidade
-As tarefas ficam no localStorage do navegador. A previsão consulta a API pública Open-Meteo. Os links de agenda, notícias e ChatGPT abrem serviços externos. Não insira senhas ou informações sensíveis neste projeto.
+A chave da OpenAI deve existir somente como Secret no Worker, nunca no HTML/JavaScript público. Não envie senhas ou dados sensíveis pela conversa.
