@@ -552,7 +552,57 @@ function renderFormattedText(container,text){
   flushParagraph();
 }
 function appendBubble(role,text,sources=[]){const row=document.createElement('div');row.className='bubble '+(role==='user'?'user':'assistant');renderFormattedText(row,text); $('chatFeed').append(row);if(sources.length){const wrap=document.createElement('div');wrap.className='assistant-sources';sources.slice(0,6).forEach(src=>{if(!src.url||!/^https:\/\//i.test(src.url))return;const a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='↗ '+(src.title||src.url);wrap.append(a)});if(wrap.childElementCount)$('chatFeed').append(wrap);} $('chatFeed').scrollTop=$('chatFeed').scrollHeight;}
- async function sendChat(text){const message=(text||$('chatInput').value).trim();if(!message)return;if(!workerUrl||!accessCode){$('connectionSettings').open=true;showToast('Configure a conexão inteligente primeiro.');return;}const history=chatHistory.slice(-10);chatHistory.push({role:'user',content:message});appendBubble('user',message);$('chatInput').value='';$('sendChat').disabled=true;$('chatState').textContent='Nicko está pensando…';const loading=document.createElement('div');loading.className='loading-dots';loading.textContent='Preparando a resposta…';$('chatFeed').append(loading);try{const data=await callWorker('/api/chat',{message,history});loading.remove();if(!data.reply)throw new Error('O serviço não retornou uma resposta.');chatHistory.push({role:'assistant',content:data.reply});lastAssistantText=data.reply;appendBubble('assistant',data.reply,data.sources||[]);$('chatState').textContent='Resposta recebida';}catch(e){loading.remove();appendBubble('assistant','Não consegui responder agora. '+e.message);$('chatState').textContent='Verifique a conexão e tente novamente.';}finally{$('sendChat').disabled=false;$('chatInput').focus();}}
+ function normalizeShortcutText(value){return String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+ function isLocalTimeRequest(value){const t=normalizeShortcutText(value);return /\b(que horas (sao|e)|que hora (e|sao)|qual (e|eh) a hora|hora atual|horario atual|horario agora|hora agora|me diga a hora|me fala a hora)\b/.test(t);}
+ function getLocalTimeReply(){const now=new Date();const time=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Maceio',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(now);const date=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Maceio',weekday:'long',day:'numeric',month:'long'}).format(now);return 'Agora são **'+time+'** em São Miguel dos Campos, Alagoas. 🌙\nHoje é '+date+'.';}
+ function isCurrentNewsRequestClient(value){const t=normalizeShortcutText(value);return /\b(noticias?|manchetes?|atualidades)\b/.test(t)&&/\b(agora|hoje|atual|atualizadas?|tempo real|ultimas?|recentes?|acontecendo)\b/.test(t);}
+ function detectNewsTopicClient(value){const t=normalizeShortcutText(value);if(/\b(alagoas|maceio)\b/.test(t))return 'alagoas';if(/\b(tecnologia|inteligencia artificial)\b/.test(t))return 'tecnologia';if(/\b(mundo|internacional|exterior)\b/.test(t))return 'mundo';if(/\b(brasil)\b/.test(t))return 'brasil';return 'geral';}
+ async function sendChat(text){
+  const message=(text||$('chatInput').value).trim();
+  if(!message)return;
+  chatHistory.push({role:'user',content:message});
+  appendBubble('user',message);
+  $('chatInput').value='';
+  if(isLocalTimeRequest(message)){
+    const reply=getLocalTimeReply();
+    chatHistory.push({role:'assistant',content:reply});lastAssistantText=reply;
+    appendBubble('assistant',reply);$('chatState').textContent='Horário local atualizado';
+    return;
+  }
+  if(!workerUrl||!accessCode){$('connectionSettings').open=true;showToast('Configure a conexão inteligente primeiro.');return;}
+  $('sendChat').disabled=true;
+  $('chatState').textContent='Nicko está pensando…';
+  const loading=document.createElement('div');loading.className='loading-dots';
+  loading.textContent=isCurrentNewsRequestClient(message)?'Consultando notícias recentes…':'Preparando a resposta…';
+  $('chatFeed').append(loading);
+  try{
+    let data;
+    if(isCurrentNewsRequestClient(message)){
+      data=await callWorker('/api/news',{topic:detectNewsTopicClient(message)});
+    }else{
+      const history=chatHistory.slice(0,-1).slice(-10);
+      data=await callWorker('/api/chat',{message,history});
+    }
+    loading.remove();
+    if(!data.reply)throw new Error('O serviço não retornou uma resposta.');
+    chatHistory.push({role:'assistant',content:data.reply});lastAssistantText=data.reply;
+    appendBubble('assistant',data.reply,data.sources||[]);
+    $('chatState').textContent='Resposta recebida';
+  }catch(e){
+    loading.remove();
+    let messageError=e.message||'Falha inesperada.';
+    if(/feed de notícias não respondeu|duas fontes de notícias falharam/i.test(messageError)){
+      messageError='O Worker no Cloudflare ainda parece estar com uma versão antiga ou sem acesso às fontes de notícias. Publique a versão mais recente de cloudflare-worker.js no Cloudflare.';
+    }
+    const reply='Não consegui concluir a solicitação. '+messageError;
+    chatHistory.push({role:'assistant',content:reply});lastAssistantText=reply;
+    appendBubble('assistant',reply);
+    $('chatState').textContent='Verifique a publicação do Worker e tente novamente.';
+  }finally{
+    $('sendChat').disabled=false;
+    $('chatInput').focus();
+  }
+}
  $('chatForm').addEventListener('submit',e=>{e.preventDefault();sendChat();});
  document.querySelectorAll('[data-prompt]').forEach(b=>b.addEventListener('click',()=>sendChat(b.dataset.prompt)));
  $('clearChat').addEventListener('click',()=>{chatHistory.length=0;lastAssistantText='';$('chatFeed').innerHTML='';appendBubble('assistant','Conversa limpa! Estou por aqui. O que vamos organizar agora? 😊');});
@@ -561,7 +611,7 @@ function appendBubble(role,text,sources=[]){const row=document.createElement('di
  if(workerUrl&&accessCode){setConnection('Conexão configurada');}
  function setNewsTopic(topic){selectedNewsTopic=topic;document.querySelectorAll('[data-topic]').forEach(b=>b.classList.toggle('active',b.dataset.topic===topic));}
  document.querySelectorAll('[data-topic]').forEach(b=>b.addEventListener('click',()=>setNewsTopic(b.dataset.topic)));
- $('refreshNews').addEventListener('click',async()=>{if(!workerUrl||!accessCode){$('connectionSettings').open=true;switchView('assistantView');showToast('Configure a conexão inteligente para gerar notícias.');return;}const button=$('refreshNews');button.disabled=true;button.textContent='Preparando resumo…';$('newsDigest').textContent='Buscando informações recentes e conferindo fontes. Isso pode levar alguns segundos.';$('newsSources').innerHTML='';try{const data=await callWorker('/api/news',{topic:selectedNewsTopic});renderFormattedText($('newsDigest'),data.reply||'Nenhum resumo foi retornado.');const sources=data.sources||[];$('newsSources').innerHTML='';sources.slice(0,10).forEach(src=>{if(!src.url||!/^https:\/\//i.test(src.url))return;const a=document.createElement('a');a.className='source-link';a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=src.title||src.url;$('newsSources').append(a)});$('newsUpdated').textContent='Atualizado às '+new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit'}).format(new Date());}catch(e){$('newsDigest').textContent='Não foi possível gerar o resumo. '+e.message;}finally{button.disabled=false;button.textContent='✦ Gerar resumo atualizado';}});
+ $('refreshNews').addEventListener('click',async()=>{if(!workerUrl||!accessCode){$('connectionSettings').open=true;switchView('assistantView');showToast('Configure a conexão inteligente para gerar notícias.');return;}const button=$('refreshNews');button.disabled=true;button.textContent='Preparando resumo…';$('newsDigest').textContent='Buscando informações recentes e conferindo fontes. Isso pode levar alguns segundos.';$('newsSources').innerHTML='';try{const data=await callWorker('/api/news',{topic:selectedNewsTopic});renderFormattedText($('newsDigest'),data.reply||'Nenhum resumo foi retornado.');const sources=data.sources||[];$('newsSources').innerHTML='';sources.slice(0,10).forEach(src=>{if(!src.url||!/^https:\/\//i.test(src.url))return;const a=document.createElement('a');a.className='source-link';a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=src.title||src.url;$('newsSources').append(a)});$('newsUpdated').textContent='Atualizado às '+new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit'}).format(new Date());}catch(e){const msg=e.message||'Falha inesperada.';$('newsDigest').textContent=/feed de notícias não respondeu|duas fontes de notícias falharam/i.test(msg)?'O Worker no Cloudflare ainda parece estar com uma versão antiga ou sem acesso às fontes de notícias. Publique a versão mais recente de cloudflare-worker.js no Cloudflare.':'Não foi possível gerar o resumo. '+msg;}finally{button.disabled=false;button.textContent='✦ Gerar resumo atualizado';}});
  // PWA install prompt
  let deferredPrompt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('installBtn').textContent='↓'});
  $('installBtn').addEventListener('click',async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;}else{showToast('Use o menu do navegador e escolha “Adicionar à tela inicial”.')}});
