@@ -161,22 +161,35 @@ Posso conversar, pesquisar assuntos recentes e ajudar a organizar seu dia. Para 
  async function callWorker(path,payload){if(!workerUrl||!accessCode)throw new Error('Configure o endereço e o código de acesso na seção abaixo.');const response=await fetch(workerUrl.replace(/\/$/,'')+path,{method:'POST',headers:apiHeaders(),body:JSON.stringify(payload)});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Não foi possível concluir a solicitação.');return data;}
  $('saveConnection').addEventListener('click',async()=>{const url=workerUrlInput.value.trim().replace(/\/$/,'');const code=accessCodeInput.value.trim();if(!/^https:\/\//i.test(url)){showToast('Informe um endereço HTTPS válido.');return;}if(!code){showToast('Informe seu código de acesso pessoal.');return;}workerUrl=url;accessCode=code;localStorage.setItem('nickoWorkerUrl',url);sessionStorage.setItem('nickoAccessCode',code);setConnection('Testando conexão…');try{const r=await fetch(url+'/health',{headers:{'Authorization':'Bearer '+code}});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Serviço não respondeu corretamente.');setConnection('Assistente conectado',true);$('connectionSettings').open=false;showToast('Conexão testada com sucesso!');}catch(e){setConnection('Não foi possível conectar');showToast(e.message);}});
  function renderInlineMarkdown(parent,text){
-  const tokenPattern=/(**[^*]+**|__[^_]+__|`[^`]+`|*[^*\n]+*)/g;
-  String(text).split(tokenPattern).forEach(part=>{
-    if(!part)return;
-    let node=null,content=part;
-    if(part.startsWith('**')&&part.endsWith('**')){node=document.createElement('strong');content=part.slice(2,-2);}
-    else if(part.startsWith('__')&&part.endsWith('__')){node=document.createElement('strong');content=part.slice(2,-2);}
-    else if(part.startsWith('`')&&part.endsWith('`')){node=document.createElement('code');content=part.slice(1,-1);node.style.background='#0b1728';node.style.padding='1px 4px';node.style.borderRadius='4px';}
-    else if(part.startsWith('*')&&part.endsWith('*')){node=document.createElement('em');content=part.slice(1,-1);}
-    if(node){node.textContent=content;parent.append(node);}
-    else parent.append(document.createTextNode(part));
-  });
+  const source=String(text);
+  let i=0;
+  while(i<source.length){
+    let next=-1,marker='';
+    for(const candidate of ['**','__','*','`']){
+      const at=source.indexOf(candidate,i);
+      if(at!==-1&&(next===-1||at<next||(at===next&&candidate.length>marker.length))){next=at;marker=candidate;}
+    }
+    if(next===-1){parent.append(document.createTextNode(source.slice(i)));break;}
+    if(next>i)parent.append(document.createTextNode(source.slice(i,next)));
+    const close=source.indexOf(marker,next+marker.length);
+    if(close===-1||close===next+marker.length){
+      parent.append(document.createTextNode(marker));
+      i=next+marker.length;
+      continue;
+    }
+    const content=source.slice(next+marker.length,close);
+    const tag=marker==='**'||marker==='__'?'strong':marker==='*'?'em':'code';
+    const node=document.createElement(tag);
+    node.textContent=content;
+    if(tag==='code'){node.style.background='#0b1728';node.style.padding='1px 4px';node.style.borderRadius='4px';}
+    parent.append(node);
+    i=close+marker.length;
+  }
 }
 function renderFormattedText(container,text){
   container.replaceChildren();
   container.style.whiteSpace='normal';
-  const lines=String(text??'').split(/\r?\n/);
+  const lines=String(text??'').replaceAll('\r','').split('\n');
   let paragraph=[],listElement=null,listKind='';
   const flushParagraph=()=>{
     if(!paragraph.length)return;
@@ -191,21 +204,27 @@ function renderFormattedText(container,text){
   for(const rawLine of lines){
     const line=rawLine.trim();
     if(!line){flushParagraph();flushList();continue;}
-    const heading=line.match(/^(#{1,3})\s+(.+)$/);
-    if(heading){
+    let headingLevel=0;
+    while(headingLevel<3&&line.charAt(headingLevel)==='#')headingLevel++;
+    if(headingLevel>0&&line.charAt(headingLevel)===' '){
       flushParagraph();flushList();
-      const h=document.createElement(heading[1].length===1?'h3':'h4');
-      h.style.fontSize=heading[1].length===1?'15px':'13px';
+      const h=document.createElement(headingLevel===1?'h3':'h4');
+      h.style.fontSize=headingLevel===1?'15px':'13px';
       h.style.margin='3px 0 6px';
-      renderInlineMarkdown(h,heading[2]);
+      renderInlineMarkdown(h,line.slice(headingLevel+1));
       container.append(h);
       continue;
     }
-    const bullet=line.match(/^[-*]\s+(.+)$/);
-    const ordered=line.match(/^\d+[.)]\s+(.+)$/);
-    if(bullet||ordered){
+    const isBullet=line.startsWith('- ')||line.startsWith('* ');
+    let itemText=isBullet?line.slice(2):null;
+    if(!isBullet){
+      let digits=0;
+      while(digits<line.length&&line.charAt(digits)>='0'&&line.charAt(digits)<='9')digits++;
+      if(digits>0&&(line.startsWith('. ',digits)||line.startsWith(') ',digits)))itemText=line.slice(digits+2);
+    }
+    if(itemText!==null){
       flushParagraph();
-      const kind=bullet?'ul':'ol';
+      const kind=isBullet?'ul':'ol';
       if(!listElement||listKind!==kind){
         flushList();
         listElement=document.createElement(kind);
@@ -216,7 +235,7 @@ function renderFormattedText(container,text){
       }
       const li=document.createElement('li');
       li.style.paddingLeft='2px';
-      renderInlineMarkdown(li,(bullet||ordered)[1]);
+      renderInlineMarkdown(li,itemText);
       listElement.append(li);
       continue;
     }
