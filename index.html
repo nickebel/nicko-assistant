@@ -84,7 +84,7 @@
 
     <section class="view" id="updatesView">
       <h1 class="page-title">Notícias e resumos</h1>
-      <p class="page-desc">Receba um boletim atualizado sem sair do Nicko Assistant. O resumo é preparado com pesquisa na web e apresenta links das fontes.</p>
+      <p class="page-desc">Consulte resumos e organize informações. Nesta versão, a pesquisa automática na web ainda não está ativada; você pode enviar uma notícia ao Nicko para resumir e explicar.</p>
       <div class="topicbar" id="newsTopics"><button class="topic active" data-topic="geral">Destaques</button><button class="topic" data-topic="brasil">Brasil</button><button class="topic" data-topic="mundo">Mundo</button><button class="topic" data-topic="alagoas">Alagoas</button><button class="topic" data-topic="tecnologia">Tecnologia</button></div>
       <div class="action-row" style="margin-bottom:12px"><button class="btn" id="refreshNews">✦ Gerar resumo atualizado</button><span class="pill" id="newsUpdated">Ainda não atualizado</span></div>
       <article class="card"><div class="card-label">BOLETIM NICKO</div><div id="newsDigest" class="summary-box" style="margin-top:10px">Quando a conexão inteligente estiver configurada, toque em “Gerar resumo atualizado” para receber as principais notícias, explicadas em português e organizadas por assunto.</div><div id="newsSources" class="source-list"></div></article>
@@ -92,7 +92,7 @@
     </section>
 
     <section class="view" id="assistantView">
-      <h1 class="page-title">Converse com Nicko</h1><p class="page-desc">Seu assistente pessoal dentro do aplicativo. Pergunte, peça pesquisas, organize ideias e solicite informações atualizadas.</p>
+      <h1 class="page-title">Converse com Nicko</h1><p class="page-desc">Seu assistente pessoal dentro do aplicativo. Converse, organize ideias, planeje tarefas e envie textos para analisar. Informações em tempo real dependem de fontes que você compartilhar.</p>
       <div class="assistant-toolbar"><span class="pill" id="assistantConnection">Conexão não configurada</span><button class="text-link" id="clearChat" type="button">Limpar conversa</button></div>
       <div class="chat-shell">
         <div class="chat-head"><div><strong style="font-size:12px">✦ Nicko Assistant</strong><div class="chat-state" id="chatState">Aguardando configuração do serviço de IA</div></div><button class="chat-btn" id="speakLast" type="button" title="Ouvir última resposta">🔊</button></div>
@@ -160,8 +160,73 @@ Posso conversar, pesquisar assuntos recentes e ajudar a organizar seu dia. Para 
  function apiHeaders(){return {'Content-Type':'application/json','Authorization':'Bearer '+accessCode};}
  async function callWorker(path,payload){if(!workerUrl||!accessCode)throw new Error('Configure o endereço e o código de acesso na seção abaixo.');const response=await fetch(workerUrl.replace(/\/$/,'')+path,{method:'POST',headers:apiHeaders(),body:JSON.stringify(payload)});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Não foi possível concluir a solicitação.');return data;}
  $('saveConnection').addEventListener('click',async()=>{const url=workerUrlInput.value.trim().replace(/\/$/,'');const code=accessCodeInput.value.trim();if(!/^https:\/\//i.test(url)){showToast('Informe um endereço HTTPS válido.');return;}if(!code){showToast('Informe seu código de acesso pessoal.');return;}workerUrl=url;accessCode=code;localStorage.setItem('nickoWorkerUrl',url);sessionStorage.setItem('nickoAccessCode',code);setConnection('Testando conexão…');try{const r=await fetch(url+'/health',{headers:{'Authorization':'Bearer '+code}});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Serviço não respondeu corretamente.');setConnection('Assistente conectado',true);$('connectionSettings').open=false;showToast('Conexão testada com sucesso!');}catch(e){setConnection('Não foi possível conectar');showToast(e.message);}});
- function appendBubble(role,text,sources=[]){const row=document.createElement('div');row.className='bubble '+(role==='user'?'user':'assistant');row.textContent=text; $('chatFeed').append(row);if(sources.length){const wrap=document.createElement('div');wrap.className='assistant-sources';sources.slice(0,6).forEach(src=>{if(!src.url||!/^https:\/\//i.test(src.url))return;const a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='↗ '+(src.title||src.url);wrap.append(a)});if(wrap.childElementCount)$('chatFeed').append(wrap);} $('chatFeed').scrollTop=$('chatFeed').scrollHeight;}
- async function sendChat(text){const message=(text||$('chatInput').value).trim();if(!message)return;if(!workerUrl||!accessCode){$('connectionSettings').open=true;showToast('Configure a conexão inteligente primeiro.');return;}const history=chatHistory.slice(-10);chatHistory.push({role:'user',content:message});appendBubble('user',message);$('chatInput').value='';$('sendChat').disabled=true;$('chatState').textContent='Nicko está pensando…';const loading=document.createElement('div');loading.className='loading-dots';loading.textContent='Pesquisando e preparando a resposta…';$('chatFeed').append(loading);try{const data=await callWorker('/api/chat',{message,history});loading.remove();if(!data.reply)throw new Error('O serviço não retornou uma resposta.');chatHistory.push({role:'assistant',content:data.reply});lastAssistantText=data.reply;appendBubble('assistant',data.reply,data.sources||[]);$('chatState').textContent='Resposta recebida';}catch(e){loading.remove();appendBubble('assistant','Não consegui responder agora. '+e.message);$('chatState').textContent='Verifique a conexão e tente novamente.';}finally{$('sendChat').disabled=false;$('chatInput').focus();}}
+ function renderInlineMarkdown(parent,text){
+  const tokenPattern=/(**[^*]+**|__[^_]+__|`[^`]+`|*[^*\n]+*)/g;
+  String(text).split(tokenPattern).forEach(part=>{
+    if(!part)return;
+    let node=null,content=part;
+    if(part.startsWith('**')&&part.endsWith('**')){node=document.createElement('strong');content=part.slice(2,-2);}
+    else if(part.startsWith('__')&&part.endsWith('__')){node=document.createElement('strong');content=part.slice(2,-2);}
+    else if(part.startsWith('`')&&part.endsWith('`')){node=document.createElement('code');content=part.slice(1,-1);node.style.background='#0b1728';node.style.padding='1px 4px';node.style.borderRadius='4px';}
+    else if(part.startsWith('*')&&part.endsWith('*')){node=document.createElement('em');content=part.slice(1,-1);}
+    if(node){node.textContent=content;parent.append(node);}
+    else parent.append(document.createTextNode(part));
+  });
+}
+function renderFormattedText(container,text){
+  container.replaceChildren();
+  container.style.whiteSpace='normal';
+  const lines=String(text??'').split(/\r?\n/);
+  let paragraph=[],listElement=null,listKind='';
+  const flushParagraph=()=>{
+    if(!paragraph.length)return;
+    const p=document.createElement('p');
+    p.style.margin='0 0 5px';
+    p.style.whiteSpace='pre-wrap';
+    paragraph.forEach((line,index)=>{if(index)p.append(document.createElement('br'));renderInlineMarkdown(p,line);});
+    container.append(p);
+    paragraph=[];
+  };
+  const flushList=()=>{listElement=null;listKind='';};
+  for(const rawLine of lines){
+    const line=rawLine.trim();
+    if(!line){flushParagraph();flushList();continue;}
+    const heading=line.match(/^(#{1,3})\s+(.+)$/);
+    if(heading){
+      flushParagraph();flushList();
+      const h=document.createElement(heading[1].length===1?'h3':'h4');
+      h.style.fontSize=heading[1].length===1?'15px':'13px';
+      h.style.margin='3px 0 6px';
+      renderInlineMarkdown(h,heading[2]);
+      container.append(h);
+      continue;
+    }
+    const bullet=line.match(/^[-*]\s+(.+)$/);
+    const ordered=line.match(/^\d+[.)]\s+(.+)$/);
+    if(bullet||ordered){
+      flushParagraph();
+      const kind=bullet?'ul':'ol';
+      if(!listElement||listKind!==kind){
+        flushList();
+        listElement=document.createElement(kind);
+        listElement.style.margin='2px 0 7px 18px';
+        listElement.style.paddingLeft='10px';
+        listKind=kind;
+        container.append(listElement);
+      }
+      const li=document.createElement('li');
+      li.style.paddingLeft='2px';
+      renderInlineMarkdown(li,(bullet||ordered)[1]);
+      listElement.append(li);
+      continue;
+    }
+    flushList();
+    paragraph.push(rawLine);
+  }
+  flushParagraph();
+}
+function appendBubble(role,text,sources=[]){const row=document.createElement('div');row.className='bubble '+(role==='user'?'user':'assistant');renderFormattedText(row,text); $('chatFeed').append(row);if(sources.length){const wrap=document.createElement('div');wrap.className='assistant-sources';sources.slice(0,6).forEach(src=>{if(!src.url||!/^https:\/\//i.test(src.url))return;const a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='↗ '+(src.title||src.url);wrap.append(a)});if(wrap.childElementCount)$('chatFeed').append(wrap);} $('chatFeed').scrollTop=$('chatFeed').scrollHeight;}
+ async function sendChat(text){const message=(text||$('chatInput').value).trim();if(!message)return;if(!workerUrl||!accessCode){$('connectionSettings').open=true;showToast('Configure a conexão inteligente primeiro.');return;}const history=chatHistory.slice(-10);chatHistory.push({role:'user',content:message});appendBubble('user',message);$('chatInput').value='';$('sendChat').disabled=true;$('chatState').textContent='Nicko está pensando…';const loading=document.createElement('div');loading.className='loading-dots';loading.textContent='Preparando a resposta…';$('chatFeed').append(loading);try{const data=await callWorker('/api/chat',{message,history});loading.remove();if(!data.reply)throw new Error('O serviço não retornou uma resposta.');chatHistory.push({role:'assistant',content:data.reply});lastAssistantText=data.reply;appendBubble('assistant',data.reply,data.sources||[]);$('chatState').textContent='Resposta recebida';}catch(e){loading.remove();appendBubble('assistant','Não consegui responder agora. '+e.message);$('chatState').textContent='Verifique a conexão e tente novamente.';}finally{$('sendChat').disabled=false;$('chatInput').focus();}}
  $('chatForm').addEventListener('submit',e=>{e.preventDefault();sendChat();});
  document.querySelectorAll('[data-prompt]').forEach(b=>b.addEventListener('click',()=>sendChat(b.dataset.prompt)));
  $('clearChat').addEventListener('click',()=>{chatHistory.length=0;lastAssistantText='';$('chatFeed').innerHTML='';appendBubble('assistant','Conversa limpa! Como posso ajudar agora? 😊');});
