@@ -204,6 +204,17 @@ function renderFormattedText(container,text){
   for(const rawLine of lines){
     const line=rawLine.trim();
     if(!line){flushParagraph();flushList();continue;}
+    if((/^={3,}$/.test(line)||/^-{3,}$/.test(line))&&paragraph.length){
+      const headingText=paragraph.join(' ').trim();
+      paragraph=[];
+      flushList();
+      const h=document.createElement('h3');
+      h.style.fontSize='15px';
+      h.style.margin='3px 0 6px';
+      renderInlineMarkdown(h,headingText);
+      container.append(h);
+      continue;
+    }
     let headingLevel=0;
     while(headingLevel<3&&line.charAt(headingLevel)==='#')headingLevel++;
     if(headingLevel>0&&line.charAt(headingLevel)===' '){
