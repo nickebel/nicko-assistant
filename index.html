@@ -289,6 +289,23 @@
       .card,.hero,.chat-shell,.nav,.quick,.news-link{background:#122b49}
     }
 
+  
+    /* Correção de contraste e prioridade do tema Liquid Glass */
+    :root{color-scheme:dark !important;--bg:#071426 !important;--text:#f3f8ff !important;--muted:#9fb4ce !important;--gold:#8fc2ff !important;--blue:#a8d4ff !important}
+    html,body{background-color:#071426 !important;color:#f3f8ff !important}
+    body{background-image:radial-gradient(ellipse at 8% 0%,rgba(37,104,176,.42),transparent 38%),radial-gradient(ellipse at 94% 32%,rgba(28,73,133,.34),transparent 36%),radial-gradient(ellipse at 48% 100%,rgba(21,61,107,.28),transparent 42%) !important}
+    .brandname,.hello,.page-title,.section-head h2,.chat-head strong{color:#f3f8ff !important}
+    .eyebrow,.date,.page-desc,.info,.section-head span,.card-label,.card-sub,.event-sub,.routine-days{color:#9fb4ce !important}
+    .hero,.card,.chat-shell,.chat-feed,.settings{background-color:rgba(17,42,72,.78) !important}
+    .hero{background-image:linear-gradient(125deg,rgba(42,91,145,.72),rgba(12,31,55,.72) 58%,rgba(20,48,81,.78)) !important}
+    .card{background-image:linear-gradient(145deg,rgba(34,65,101,.78),rgba(14,34,60,.78)) !important}
+    .quick,.news-link,.task{background:rgba(27,57,92,.78) !important;color:#e8f2ff !important}
+    .bubble.assistant{background:rgba(95,137,188,.22) !important;color:#eaf3ff !important}
+    .task-input,.chat-input,.settings input{background:rgba(8,24,44,.78) !important;color:#f1f7ff !important}
+    .nav{background:rgba(7,20,38,.86) !important}
+    .nav button{color:#a4b9d2 !important}
+    .nav button.active{color:#c0e0ff !important;background:rgba(113,169,231,.2) !important}
+
   </style>
 </head>
 <body>
@@ -358,11 +375,11 @@
 
     <section class="view" id="updatesView">
       <h1 class="page-title">Notícias e resumos</h1>
-      <p class="page-desc">Consulte resumos e organize informações. Nesta versão, a pesquisa automática na web ainda não está ativada; você pode enviar uma notícia ao Nicko para resumir e explicar.</p>
+      <p class="page-desc">Receba manchetes recentes por tema e uma síntese em português. Toque em uma fonte para abrir a matéria completa.</p>
       <div class="topicbar" id="newsTopics"><button class="topic active" data-topic="geral">Destaques</button><button class="topic" data-topic="brasil">Brasil</button><button class="topic" data-topic="mundo">Mundo</button><button class="topic" data-topic="alagoas">Alagoas</button><button class="topic" data-topic="tecnologia">Tecnologia</button></div>
       <div class="action-row" style="margin-bottom:12px"><button class="btn" id="refreshNews">✦ Gerar resumo atualizado</button><span class="pill" id="newsUpdated">Ainda não atualizado</span></div>
-      <article class="card"><div class="card-label">BOLETIM NICKO</div><div id="newsDigest" class="summary-box" style="margin-top:10px">Quando a conexão inteligente estiver configurada, toque em “Gerar resumo atualizado” para receber as principais notícias, explicadas em português e organizadas por assunto.</div><div id="newsSources" class="source-list"></div></article>
-      <p class="info">As notícias serão pesquisadas no momento da solicitação. Os links das fontes ficam disponíveis aqui; o aplicativo ainda não atualiza sozinho em segundo plano.</p>
+      <article class="card"><div class="card-label">BOLETIM NICKO</div><div id="newsDigest" class="summary-box" style="margin-top:10px">Escolha um tema e toque em “Gerar resumo atualizado” para carregar manchetes recentes e receber uma síntese do Nicko.</div><div id="newsSources" class="source-list"></div></article>
+      <p class="info">As manchetes são obtidas do Google Notícias no momento da solicitação. A síntese considera os títulos disponíveis; abra as fontes para ler os detalhes. O aplicativo não atualiza sozinho em segundo plano.</p>
     </section>
 
     <section class="view" id="assistantView">
