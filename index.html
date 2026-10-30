@@ -416,10 +416,15 @@ Posso ajudar a organizar ideias, planejar tarefas, estudar, escrever textos e ti
  const $=id=>document.getElementById(id);
  const workDays=[1,2,3,4,5];
  const dateNow=new Date();
- const weekday=dateNow.getDay();
- const dateFmt=new Intl.DateTimeFormat('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+ const appTimeZone='America/Maceio';
+ const weekdayLabel=new Intl.DateTimeFormat('en-US',{timeZone:appTimeZone,weekday:'short'}).format(dateNow);
+ const weekdayMap={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+ const weekday=weekdayMap[weekdayLabel]??dateNow.getDay();
+ const dateFmt=new Intl.DateTimeFormat('pt-BR',{timeZone:appTimeZone,weekday:'long',day:'numeric',month:'long'});
  $('todayDate').textContent=dateFmt.format(dateNow).replace(/^./,c=>c.toUpperCase());
- const hour=dateNow.getHours(); $('greeting').textContent=(hour<12?'Bom dia':hour<18?'Boa tarde':'Boa noite')+', Nicko! '+(hour<12?'☀️':hour<18?'🌤️':'🌙');
+ const hour=Number(new Intl.DateTimeFormat('pt-BR',{timeZone:appTimeZone,hour:'2-digit',hourCycle:'h23'}).format(dateNow));
+ const greeting=hour<5?'Boa madrugada':hour<12?'Bom dia':hour<18?'Boa tarde':'Boa noite';
+ $('greeting').textContent=greeting+', Nicko! '+(hour<5||hour>=18?'🌙':hour<12?'☀️':'🌤️');
  function renderWork(){
    let rows=''; let label='Sem expediente cadastrado'; let sub='Aproveite seu dia';
    if(workDays.includes(weekday)){rows='<div class="agenda-line"><div class="time">07h–12h</div><div><div class="event-title">Trabalho — manhã</div><div class="event-sub">Expediente</div></div></div><div class="agenda-line"><div class="time">13h–17h</div><div><div class="event-title">Trabalho — tarde</div><div class="event-sub">Expediente</div></div></div>';label='07h às 17h';sub='Segunda a sexta • intervalo 12h–13h';}
