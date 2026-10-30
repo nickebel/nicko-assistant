@@ -74,13 +74,103 @@ function parseNewsRss(xml, limit = 12) {
   }).filter(item => item.title && /^https:\/\//i.test(item.url)).slice(0, limit);
 }
 
+function normalizeText(value = "") {
+  return String(value).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function detectNewsTopic(message = "") {
+  const text = normalizeText(message);
+  if (/\b(alagoas|maceio)\b/.test(text)) return "alagoas";
+  if (/\b(tecnologia|inteligencia artificial|ia)\b/.test(text)) return "tecnologia";
+  if (/\b(mundo|internacional|exterior)\b/.test(text)) return "mundo";
+  if (/\b(brasil|brasileir[oa]s?)\b/.test(text)) return "brasil";
+  return "geral";
+}
+
+function isCurrentNewsRequest(message = "") {
+  const text = normalizeText(message);
+  const mentionsNews = /\b(noticias?|manchetes?|atualidades|news)\b/.test(text);
+  const asksCurrent = /\b(agora|hoje|atual|atualizadas?|tempo real|ultimas?|recentes?|acontecendo)\b/.test(text);
+  return mentionsNews && (asksCurrent || /\b(noticias?|manchetes?)\b/.test(text));
+}
+
+async function createNewsBrief(env, topic = "geral") {
+  const searches = {
+    geral: "",
+    brasil: "Brasil when:1d",
+    mundo: "(mundo OR internacional) when:1d",
+    alagoas: "(Alagoas OR Maceió) when:7d",
+    tecnologia: "(tecnologia OR inteligência artificial) when:1d",
+  };
+  const safeTopic = Object.prototype.hasOwnProperty.call(searches, topic) ? topic : "geral";
+  const query = searches[safeTopic];
+  const feedUrl = new URL(query ? "https://news.google.com/rss/search" : "https://news.google.com/rss");
+  if (query) feedUrl.searchParams.set("q", query);
+  feedUrl.searchParams.set("hl", "pt-BR");
+  feedUrl.searchParams.set("gl", "BR");
+  feedUrl.searchParams.set("ceid", "BR:pt-419");
+
+  const feedResponse = await fetch(feedUrl.toString(), {
+    headers: { "Accept": "application/rss+xml, application/xml, text/xml" },
+  });
+  if (!feedResponse.ok) throw new Error("O feed de notícias não respondeu agora. Tente novamente em instantes.");
+  const articles = parseNewsRss(await feedResponse.text(), 12);
+  if (!articles.length) {
+    return {
+      reply: "Não encontrei manchetes recentes para esse tema agora. Experimente outra categoria.",
+      sources: [],
+    };
+  }
+
+  const now = new Date();
+  const updatedAt = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Maceio", dateStyle: "short", timeStyle: "short",
+  }).format(now);
+  const headlines = articles.map((item, index) =>
+    (index + 1) + ". " + item.title +
+    (item.source ? " — Fonte: " + item.source : "") +
+    (item.publishedAt ? " — Publicado em: " + item.publishedAt : "")
+  ).join("\n");
+
+  let summaryText;
+  try {
+    const summary = await askAI(
+      env,
+      "Você é o editor de notícias do Nicko. Resuma as manchetes fornecidas em português do Brasil, em até 5 tópicos curtos. Use somente fatos explícitos nos títulos; não invente detalhes, causas, números, citações ou consequências. Não diga que não tem acesso a notícias, pois os títulos foram fornecidos pelo feed nesta solicitação. Avise que é um panorama de manchetes e que os links levam às matérias completas.",
+      [{ role: "user", content: "Categoria: " + safeTopic + "\nManchetes do feed consultado agora:\n" + headlines }],
+      900
+    );
+    summaryText = summary.reply;
+  } catch (error) {
+    summaryText = "Aqui estão as manchetes recentes encontradas. A síntese automática não ficou disponível nesta tentativa; abra os links para ler as matérias.";
+  }
+
+  return {
+    reply: "**Manchetes consultadas às " + updatedAt + " (horário de Alagoas)**\n\n" +
+      summaryText + "\n\n*Panorama baseado nos títulos do feed; consulte as fontes para os detalhes.*",
+    sources: articles.map(item => {
+      let publication = "";
+      const parsedDate = item.publishedAt ? new Date(item.publishedAt) : null;
+      if (parsedDate && !Number.isNaN(parsedDate.getTime())) {
+        publication = " · " + new Intl.DateTimeFormat("pt-BR", {
+          timeZone: "America/Maceio", dateStyle: "short", timeStyle: "short",
+        }).format(parsedDate);
+      }
+      return {
+        title: (item.source ? item.source + " — " : "") + item.title + publication,
+        url: item.url,
+      };
+    }),
+  };
+}
+
 const BASE_INSTRUCTIONS =
   "Você é o Nicko Assistant, o assistente pessoal digital do usuário. Converse sempre em português do Brasil, salvo quando o usuário pedir outro idioma.\n" +
   "PERSONALIDADE: seja próximo, gentil, natural, paciente e confiável. Use linguagem simples e informal na medida certa, sem gírias forçadas. Use poucos emojis, apenas quando combinarem. Não chame o usuário pelo nome em toda resposta.\n" +
   "ESTILO: responda primeiro ao que foi perguntado. Prefira respostas curtas, claras e humanas; aprofunde quando o assunto exigir. Use Markdown padrão: títulos com # ou ##, termos importantes entre **dois asteriscos** para negrito, listas com - e passos com 1. 2. 3. Quando o usuário pedir uma resposta formatada, cumpra explicitamente os formatos solicitados. Não use linhas de sinais de igual ou hífens para sublinhar títulos. Não escreva asteriscos literais fora da marcação Markdown. Evite excesso de títulos e listas.\n" +
   "AJUDA: organize ideias, listas de tarefas, rotinas, estudos, textos, mensagens, planejamento e dúvidas de tecnologia. Ao ensinar algo técnico, use palavras simples, explique termos necessários e não presuma conhecimento avançado.\n" +
   "CONTEXTO: quando relevante, considere que o usuário vive em São Miguel dos Campos, Alagoas. A rotina de trabalho informada é de segunda a sexta, 07h às 12h e 13h às 17h, e sábado, 07h às 12h. O usuário prefere explicações simples, diretas e humanizadas. Use esses dados somente quando forem úteis; não os repita sem necessidade.\n" +
-  "INFORMAÇÕES ATUAIS: nesta versão, você não tem pesquisa na web nem acesso a informações ao vivo. Para notícias, preços, horários ou acontecimentos recentes, informe claramente que não consegue verificar em tempo real e convide a pessoa a enviar um link ou texto para analisar. Não invente fontes, links, dados ou datas.\n" +
+  "INFORMAÇÕES ATUAIS: quando a solicitação for sobre notícias ou manchetes recentes, o sistema pode fornecer um feed atualizado do Google Notícias. Use somente as manchetes e os links recebidos do feed; não invente acontecimentos, datas, números ou fontes. Para outros assuntos que exijam dados ao vivo, explique com transparência quando não houver uma fonte conectada.\n" +
   "LIMITES: não diga que acessa arquivos, agenda, aplicativos ou tarefas do aparelho. Não afirme que cria alarmes, envia mensagens, monitora o celular, executa comandos ou trabalha em segundo plano, a menos que uma integração realmente faça isso. Não afirme que salva memórias permanentes. Use apenas o contexto da conversa e as informações fixas acima.";
 
 export default {
@@ -127,6 +217,10 @@ export default {
         const message = String(body.message || "").trim().slice(0, 2000);
         if (!message) return json({ error: "Escreva uma mensagem para o assistente." }, 400);
 
+        if (isCurrentNewsRequest(message)) {
+          return json(await createNewsBrief(env, detectNewsTopic(message)));
+        }
+
         const history = Array.isArray(body.history) ? body.history.slice(-10) : [];
         const messages = history
           .filter(item => item && ["user", "assistant"].includes(item.role))
@@ -141,61 +235,7 @@ export default {
 
       if (url.pathname === "/api/news") {
         const topic = String(body.topic || "geral").toLowerCase();
-        const searches = {
-          geral: "",
-          brasil: "Brasil when:2d",
-          mundo: "mundo internacional when:2d",
-          alagoas: "Alagoas OR Maceió when:7d",
-          tecnologia: "tecnologia OR inteligência artificial when:2d",
-        };
-        const query = Object.prototype.hasOwnProperty.call(searches, topic) ? searches[topic] : searches.geral;
-        const feedUrl = new URL(query ? "https://news.google.com/rss/search" : "https://news.google.com/rss");
-        if (query) feedUrl.searchParams.set("q", query);
-        feedUrl.searchParams.set("hl", "pt-BR");
-        feedUrl.searchParams.set("gl", "BR");
-        feedUrl.searchParams.set("ceid", "BR:pt-419");
-
-        const feedResponse = await fetch(feedUrl.toString(), {
-          headers: { "Accept": "application/rss+xml, application/xml, text/xml" },
-        });
-        if (!feedResponse.ok) throw new Error("Não consegui acessar o feed de notícias agora. Tente novamente.");
-        const xml = await feedResponse.text();
-        const articles = parseNewsRss(xml, 12);
-        if (!articles.length) {
-          return json({
-            reply: "Não encontrei manchetes para esse tema neste momento. Tente outra categoria ou atualize novamente daqui a pouco.",
-            sources: [],
-          });
-        }
-
-        const headlines = articles.map((item, index) =>
-          (index + 1) + ". " + item.title +
-          (item.source ? " — Fonte: " + item.source : "") +
-          (item.publishedAt ? " — Publicado em: " + item.publishedAt : "")
-        ).join("\n");
-
-        let reply;
-        try {
-          const summary = await askAI(
-            env,
-            "Você é o editor de notícias do Nicko. Organize as manchetes fornecidas em português do Brasil, em até 4 tópicos curtos. Explique somente o que é possível concluir pelas manchetes. Não invente detalhes, causas, números, citações ou consequências que não estejam nelas. Deixe claro que o boletim é um panorama das manchetes, não a leitura integral das matérias. Termine recomendando abrir os links das fontes para detalhes.",
-            [{ role: "user", content: "Tema selecionado: " + (topic || "geral") + "\nManchetes coletadas no Google Notícias:\n" + headlines }],
-            850
-          );
-          reply = summary.reply;
-        } catch (error) {
-          reply = "Encontrei estas manchetes recentes. A síntese por IA não ficou disponível agora, mas você pode abrir cada fonte abaixo:\n\n" +
-            articles.map(item => "- " + item.title).join("\n");
-        }
-
-        return json({
-          reply,
-          sources: articles.map(item => ({
-            title: (item.source ? item.source + " — " : "") + item.title,
-            url: item.url,
-            publishedAt: item.publishedAt,
-          })),
-        });
+        return json(await createNewsBrief(env, topic));
       }
 
       return json({ error: "Rota não encontrada." }, 404);
