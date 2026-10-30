@@ -37,8 +37,9 @@ A versão atual não precisa de `OPENAI_API_KEY` nem de `OPENAI_MODEL`. Se esses
 
 - `GET /health`: verifica o código de acesso e informa se o binding de IA existe.
 - `POST /api/chat`: conversa com o modelo Workers AI e recebe o histórico recente da conversa aberta.
-- `POST /api/news`: informa que a pesquisa automática de notícias ainda não está ativada.
-- O Nicko pode resumir e explicar notícias, links e textos que você enviar na conversa.
+- `POST /api/news`: consulta manchetes do Google Notícias por tema (geral, Brasil, mundo, Alagoas ou tecnologia), organiza uma síntese com Workers AI e devolve links das fontes.
+- O boletim de notícias usa manchetes de um feed RSS; a síntese é baseada nos títulos disponíveis, não na leitura integral de cada matéria. Os links das fontes são apresentados para conferência.
+- A pesquisa de manchetes ocorre quando você toca em “Gerar resumo atualizado”; não há atualização automática em segundo plano.
 - O histórico da conversa fica na memória da página e não é salvo como memória permanente.
 - A lista de tarefas fica no navegador/aparelho; o Worker não acessa essa lista.
 - O serviço não monitora o celular, não executa ações em segundo plano e não sincroniza o Google Agenda.
