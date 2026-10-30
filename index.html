@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101b2d">
+<meta name="description" content="Nicko Assistant — seu painel pessoal para organizar o dia.">
+<title>Nicko Assistant</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<style>
+:root{color-scheme:dark;--bg:#0b1321;--panel:#142238;--panel2:#1b2d47;--line:#ffffff18;--text:#f4f7fb;--muted:#a6b5c9;--gold:#e8bc70;--blue:#8fc2ff;--mint:#91d5be}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 90% -10%,#1c3555 0,transparent 38%),var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}button,input{font:inherit}button,a{touch-action:manipulation}.app{max-width:760px;margin:auto;padding:env(safe-area-inset-top) 16px calc(94px + env(safe-area-inset-bottom))}.top{display:flex;justify-content:space-between;align-items:center;padding:22px 2px 18px}.brand{display:flex;gap:11px;align-items:center}.logo{width:44px;height:44px;border-radius:15px;background:linear-gradient(145deg,#f1d39b,#b98548);display:grid;place-items:center;color:#182337;font-weight:900;font-size:20px}.eyebrow{font-size:10px;letter-spacing:.17em;color:var(--muted);font-weight:800}.brandname{font-size:16px;font-weight:800;margin-top:2px}.iconbtn{width:42px;height:42px;border:1px solid var(--line);background:#17263c;border-radius:14px;color:#e8eff9;font-size:20px}.hero{padding:23px;border:1px solid var(--line);border-radius:25px;background:linear-gradient(135deg,#1a2d48,#142238 75%)}.date{color:#b8c7da;font-size:12px}.hello{font-size:29px;font-weight:800;letter-spacing:-.045em;margin:9px 0 5px}.hero p{margin:0;color:#bdcadd;font-size:13px;line-height:1.5}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 14px;border:0;border-radius:13px;background:var(--gold);color:#202638;font-size:12px;font-weight:800;text-decoration:none}.btn.alt{background:#263b58;color:#e8f0fa;border:1px solid var(--line)}.head{display:flex;align-items:center;justify-content:space-between;margin:24px 2px 11px}.head h2{font-size:14px;margin:0}.head span{font-size:11px;color:var(--muted)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.card{background:linear-gradient(150deg,#17273d,#111e31);border:1px solid var(--line);border-radius:18px;padding:15px;min-width:0}.weather{min-height:158px}.muted{color:var(--muted);font-size:11px}.temp{font-size:35px;font-weight:800;margin-top:9px}.wide{grid-column:1/-1}.workline{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}.workline:last-child{border-bottom:0}.time{min-width:85px;color:var(--gold);font-size:12px;font-weight:800}.worktitle{font-size:12px;font-weight:700}.worksub{font-size:10px;color:var(--muted);margin-top:3px}.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.quick a{border:1px solid var(--line);background:#15253a;border-radius:15px;padding:13px 5px;color:var(--text);text-align:center;text-decoration:none;font-size:10px;display:flex;flex-direction:column;gap:7px}.quick b{font-size:21px}.view{display:none}.view.active{display:block}.nav{position:fixed;z-index:5;left:0;right:0;bottom:0;padding:9px 16px calc(9px + env(safe-area-inset-bottom));background:#0e1929ed;backdrop-filter:blur(18px);border-top:1px solid var(--line)}.navinner{max-width:620px;margin:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.nav button{border:0;background:transparent;color:#8193aa;padding:8px 3px;border-radius:12px;font-size:10px;display:flex;flex-direction:column;align-items:center;gap:4px}.nav button b{font-size:19px}.nav button.active{background:#1b2c43;color:var(--gold)}.pagetitle{font-size:25px;letter-spacing:-.04em;margin:13px 0 5px}.desc{font-size:12px;color:var(--muted);margin:0 0 19px;line-height:1.5}.taskform{display:flex;gap:8px;margin:16px 0}.taskinput{min-width:0;flex:1;background:#101d30;border:1px solid var(--line);border-radius:13px;padding:12px;color:var(--text);font-size:12px}.add{width:48px;border:0;border-radius:13px;background:var(--gold);color:#172238;font-size:23px;font-weight:700}.task{display:flex;gap:10px;align-items:center;background:#17273d;border:1px solid var(--line);padding:12px;border-radius:13px;margin-bottom:8px}.task input{accent-color:#d5aa65;width:17px;height:17px}.task span{font-size:12px;flex:1;overflow-wrap:anywhere}.task.done span{text-decoration:line-through;color:#71839a}.delete{border:0;background:transparent;color:#a9b8ca;font-size:18px}.empty{border:1px dashed #40516a;border-radius:15px;padding:22px;text-align:center;color:var(--muted);font-size:12px;line-height:1.5}.item{padding:14px 0;border-bottom:1px solid var(--line)}.item:last-child{border:0}.item h3{font-size:13px;margin:0 0 5px}.item p{font-size:11px;color:var(--muted);line-height:1.5;margin:0 0 8px}.link{font-size:11px;color:var(--blue);text-decoration:none;font-weight:750}.note{font-size:10px;line-height:1.55;color:#8293a9;margin:14px 2px}.toast{position:fixed;z-index:9;bottom:94px;left:50%;transform:translateX(-50%);background:#f0c77e;color:#172238;padding:11px 15px;border-radius:12px;font-size:12px;font-weight:800;display:none;white-space:nowrap}.footer{text-align:center;color:#71839a;font-size:10px;padding:24px 8px 0;line-height:1.5}
+@media(min-width:620px){.app{padding-left:24px;padding-right:24px}.hero{padding:29px}.hello{font-size:34px}.grid{gap:14px}.card{padding:19px}}
+</style>
+</head>
+<body>
+<main class="app">
+<header class="top">
+ <div class="brand"><div class="logo">N</div><div><div class="eyebrow">SEU ASSISTENTE PESSOAL</div><div class="brandname">Nicko Assistant</div></div></div>
+ <button class="iconbtn" id="install" aria-label="Instalar aplicativo" title="Instalar">＋</button>
+</header>
+<section class="view active" id="home">
+ <div class="hero"><div class="date" id="date">Seu painel pessoal</div><div class="hello" id="hello">Olá, Nicko! ☀️</div><p>Seu dia em um só lugar. Confira o clima, organize tarefas e acompanhe o que importa.</p><div class="actions"><a class="btn" href="https://chatgpt.com/" target="_blank" rel="noopener">✦ Conversar com ChatGPT</a><button class="btn alt" id="copy">Copiar meu resumo</button></div></div>
+ <div class="head"><h2>Visão geral</h2><span id="status">Carregando clima…</span></div>
+ <div class="grid">
+  <article class="card weather"><div class="muted">CLIMA • SÃO MIGUEL DOS CAMPOS</div><div style="display:flex;justify-content:space-between;align-items:center"><div class="temp" id="temp">--°</div><div style="font-size:30px" id="weathericon">🌤️</div></div><div id="weatherdesc" class="muted">Buscando previsão…</div><div class="muted" id="highlow" style="margin-top:12px">Máx --° / Mín --°</div><div class="muted" id="rain">Chuva: --%</div></article>
+  <article class="card"><div class="muted">SEU TRABALHO HOJE</div><div class="temp" style="font-size:25px" id="worktoday">--</div><div class="muted" id="worksub">Horários informados</div></article>
+  <article class="card wide"><div class="head" style="margin:0 0 6px"><h2>Agenda de trabalho</h2><span>Horários fixos</span></div><div id="todayagenda"></div><p class="note">Estes horários são um resumo local do que você informou. Eles não são sincronizados automaticamente com sua conta Google.</p></article>
+ </div>
+ <div class="head"><h2>Acesso rápido</h2><span>Seus serviços</span></div>
+ <div class="quick"><a href="https://calendar.google.com/" target="_blank" rel="noopener"><b>📅</b>Agenda</a><a href="https://news.google.com/home?hl=pt-BR&gl=BR&ceid=BR:pt-419" target="_blank" rel="noopener"><b>📰</b>Notícias</a><a href="https://chatgpt.com/" target="_blank" rel="noopener"><b>🎙️</b>Assistente</a><a href="https://www.google.com/" target="_blank" rel="noopener"><b>🔎</b>Pesquisar</a></div>
+</section>
+<section class="view" id="agenda">
+ <h1 class="pagetitle">Minha agenda</h1><p class="desc">Sua rotina de trabalho, conforme os horários que você informou.</p>
+ <article class="card"><div class="item"><h3>Segunda a sexta — manhã</h3><p>07:00 às 12:00</p></div><div class="item"><h3>Segunda a sexta — tarde</h3><p>13:00 às 17:00</p></div><div class="item"><h3>Sábado</h3><p>07:00 às 12:00</p></div><div class="item"><h3>Domingo</h3><p>Sem expediente fixo cadastrado</p></div></article>
+ <p class="note">Para editar eventos oficiais, abra o Google Agenda. Esta tela é apenas um painel de consulta e ainda não tem integração direta com a conta.</p><a class="btn" style="width:100%" href="https://calendar.google.com/" target="_blank" rel="noopener">Abrir Google Agenda ↗</a>
+</section>
+<section class="view" id="tasks">
+ <h1 class="pagetitle">Minhas tarefas</h1><p class="desc">Anote o que precisa fazer e marque quando concluir.</p>
+ <form class="taskform" id="taskform"><input class="taskinput" id="taskinput" placeholder="Adicionar uma tarefa…" maxlength="120" autocomplete="off"><button class="add" aria-label="Adicionar tarefa">+</button></form><div id="tasklist"></div><p class="note">As tarefas ficam salvas neste navegador e aparelho. Ainda não são sincronizadas com outros dispositivos.</p>
+</section>
+<section class="view" id="updates">
+ <h1 class="pagetitle">Atualizações</h1><p class="desc">Acompanhe fontes atualizadas. Os links abrem páginas externas.</p>
+ <article class="card">
+  <div class="item"><h3>🇧🇷 Notícias do Brasil</h3><p>Política, economia, serviços e acontecimentos nacionais.</p><a class="link" href="https://news.google.com/home?hl=pt-BR&gl=BR&ceid=BR:pt-419" target="_blank" rel="noopener">Ver notícias →</a></div>
+  <div class="item"><h3>🌎 Notícias do mundo</h3><p>Principais acontecimentos internacionais.</p><a class="link" href="https://news.google.com/search?q=mundo&hl=pt-BR&gl=BR&ceid=BR:pt-419" target="_blank" rel="noopener">Ver notícias →</a></div>
+  <div class="item"><h3>💻 Tecnologia e inteligência artificial</h3><p>Novidades em aplicativos, celulares, IA e segurança digital.</p><a class="link" href="https://news.google.com/search?q=tecnologia%20intelig%C3%AAncia%20artificial&hl=pt-BR&gl=BR&ceid=BR:pt-419" target="_blank" rel="noopener">Ver atualizações →</a></div>
+  <div class="item"><h3>📍 Alagoas</h3><p>Notícias e acontecimentos do estado.</p><a class="link" href="https://news.google.com/search?q=Alagoas&hl=pt-BR&gl=BR&ceid=BR:pt-419" target="_blank" rel="noopener">Ver notícias locais →</a></div>
+ </article>
+ <p class="note">Esta versão ainda não seleciona nem resume notícias automaticamente. Para um boletim personalizado, vamos adicionar uma integração na próxima etapa.</p>
+</section>
+<div class="footer">Nicko Assistant • versão inicial 0.1<br>Um projeto pessoal em evolução.</div>
+</main>
+<nav class="nav" aria-label="Navegação principal"><div class="navinner"><button class="active" data-view="home"><b>⌂</b>Início</button><button data-view="agenda"><b>▦</b>Agenda</button><button data-view="tasks"><b>✓</b>Tarefas</button><button data-view="updates"><b>◉</b>Atualizações</button></div></nav>
+<div class="toast" id="toast" role="status"></div>
+<script>
+(function(){
+"use strict";
+var $=function(id){return document.getElementById(id)};
+var now=new Date(),day=now.getDay(),hour=now.getHours();
+var dateText=new Intl.DateTimeFormat("pt-BR",{weekday:"long",day:"numeric",month:"long"}).format(now);
+$("date").textContent=dateText.charAt(0).toUpperCase()+dateText.slice(1);
+$("hello").textContent=(hour<12?"Bom dia":hour<18?"Boa tarde":"Boa noite")+", Nicko! "+(hour<12?"☀️":hour<18?"🌤️":"🌙");
+function work(){
+ var rows="",label="",sub="";
+ if(day>=1&&day<=5){label="07h às 17h";sub="Segunda a sexta";rows='<div class="workline"><div class="time">07h–12h</div><div><div class="worktitle">Trabalho — manhã</div><div class="worksub">Expediente</div></div></div><div class="workline"><div class="time">13h–17h</div><div><div class="worktitle">Trabalho — tarde</div><div class="worksub">Expediente</div></div></div>';}
+ else if(day===6){label="07h às 12h";sub="Sábado";rows='<div class="workline"><div class="time">07h–12h</div><div><div class="worktitle">Trabalho</div><div class="worksub">Expediente de sábado</div></div></div>';}
+ else{label="Descanso";sub="Domingo";rows='<div class="empty">Nenhum expediente fixo hoje. Aproveite seu descanso! ✨</div>';}
+ $("worktoday").textContent=label;$("worksub").textContent=sub;$("todayagenda").innerHTML=rows;
+}
+work();
+function toast(msg){var t=$("toast");t.textContent=msg;t.style.display="block";clearTimeout(toast.timer);toast.timer=setTimeout(function(){t.style.display="none"},2500)}
+function switchView(id){document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("active",v.id===id)});document.querySelectorAll(".nav button").forEach(function(b){b.classList.toggle("active",b.getAttribute("data-view")===id)});window.scrollTo({top:0,behavior:"smooth"})}
+document.querySelectorAll("[data-view]").forEach(function(el){el.addEventListener("click",function(e){e.preventDefault();switchView(el.getAttribute("data-view"))})});
+var tasks=[];try{tasks=JSON.parse(localStorage.getItem("nickoTasks")||"[]");if(!Array.isArray(tasks))tasks=[]}catch(e){tasks=[]}
+function save(){try{localStorage.setItem("nickoTasks",JSON.stringify(tasks))}catch(e){toast("Não foi possível salvar neste navegador.")}}
+function renderTasks(){var root=$("tasklist");root.innerHTML="";if(!tasks.length){root.innerHTML='<div class="empty">Nenhuma tarefa por enquanto.<br>Adicione sua primeira tarefa acima. ✨</div>';return}tasks.forEach(function(task,i){var row=document.createElement("label");row.className="task"+(task.done?" done":"");var cb=document.createElement("input");cb.type="checkbox";cb.checked=!!task.done;cb.addEventListener("change",function(){tasks[i].done=cb.checked;save();renderTasks()});var span=document.createElement("span");span.textContent=task.text;var del=document.createElement("button");del.type="button";del.className="delete";del.textContent="×";del.setAttribute("aria-label","Excluir tarefa");del.addEventListener("click",function(){tasks.splice(i,1);save();renderTasks()});row.append(cb,span,del);root.append(row)})}
+$("taskform").addEventListener("submit",function(e){e.preventDefault();var input=$("taskinput"),value=input.value.trim();if(!value)return;tasks.unshift({text:value,done:false});save();renderTasks();input.value="";toast("Tarefa adicionada!")});renderTasks();
+$("copy").addEventListener("click",async function(){var workText=day>=1&&day<=5?"Trabalho das 07h às 12h e das 13h às 17h.":day===6?"Trabalho das 07h às 12h.":"Sem expediente fixo hoje.";var pending=tasks.filter(function(t){return !t.done}).map(function(t){return "• "+t.text}).join("\n")||"Nenhuma tarefa pendente cadastrada.";var brief="Meu resumo de hoje — "+dateText+"\n"+workText+"\n\nTarefas:\n"+pending+"\n\nAjude-me a organizar meu dia.";try{await navigator.clipboard.writeText(brief);toast("Resumo copiado! Cole no ChatGPT.")}catch(e){toast("O navegador não permitiu copiar.")}});
+async function loadWeather(){try{$("status").textContent="Atualizando clima…";var geo=await fetch("https://geocoding-api.open-meteo.com/v1/search?name=S%C3%A3o%20Miguel%20dos%20Campos&count=1&language=pt&format=json");if(!geo.ok)throw Error("geo");var place=(await geo.json()).results[0];if(!place)throw Error("place");var url="https://api.open-meteo.com/v1/forecast?latitude="+place.latitude+"&longitude="+place.longitude+"&current=temperature_2m,apparent_temperature,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=America%2FMaceio&forecast_days=1";var res=await fetch(url);if(!res.ok)throw Error("weather");var d=await res.json(),c=d.current,dy=d.daily;var codes={0:["Céu limpo","☀️"],1:["Predominantemente limpo","🌤️"],2:["Parcialmente nublado","⛅"],3:["Nublado","☁️"],45:["Neblina","🌫️"],48:["Neblina","🌫️"],51:["Garoa leve","🌦️"],53:["Garoa moderada","🌦️"],55:["Garoa intensa","🌧️"],61:["Chuva leve","🌧️"],63:["Chuva moderada","🌧️"],65:["Chuva forte","⛈️"],80:["Pancadas de chuva","🌦️"],81:["Pancadas moderadas","🌧️"],82:["Pancadas fortes","⛈️"],95:["Trovoadas","⛈️"],96:["Trovoadas com granizo","⛈️"],99:["Trovoadas fortes","⛈️"]};var info=codes[c.weather_code]||["Condição variável","🌤️"];$("temp").textContent=Math.round(c.temperature_2m)+"°";$("weathericon").textContent=info[1];$("weatherdesc").textContent=info[0]+" • sensação "+Math.round(c.apparent_temperature)+"°";$("highlow").textContent="Máx "+Math.round(dy.temperature_2m_max[0])+"° / Mín "+Math.round(dy.temperature_2m_min[0])+"°";$("rain").textContent="Chuva: "+(dy.precipitation_probability_max[0]??"--")+"%";$("status").textContent="Clima atualizado"}catch(e){$("weatherdesc").textContent="Previsão indisponível no momento.";$("status").textContent="Clima indisponível"}}
+loadWeather();
+var deferred=null;window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();deferred=e;$("install").textContent="↓"});
+$("install").addEventListener("click",async function(){if(deferred){deferred.prompt();await deferred.userChoice;deferred=null}else toast('No menu do navegador, escolha "Adicionar à tela inicial".')});
+if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost")){window.addEventListener("load",function(){navigator.serviceWorker.register("./sw.js").catch(function(){})})}
+})();
+</script>
+</body>
+</html>
