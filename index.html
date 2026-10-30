@@ -379,11 +379,11 @@
       <div class="topicbar" id="newsTopics"><button class="topic active" data-topic="geral">Destaques</button><button class="topic" data-topic="brasil">Brasil</button><button class="topic" data-topic="mundo">Mundo</button><button class="topic" data-topic="alagoas">Alagoas</button><button class="topic" data-topic="tecnologia">Tecnologia</button></div>
       <div class="action-row" style="margin-bottom:12px"><button class="btn" id="refreshNews">✦ Gerar resumo atualizado</button><span class="pill" id="newsUpdated">Ainda não atualizado</span></div>
       <article class="card"><div class="card-label">BOLETIM NICKO</div><div id="newsDigest" class="summary-box" style="margin-top:10px">Escolha um tema e toque em “Gerar resumo atualizado” para carregar manchetes recentes e receber uma síntese do Nicko.</div><div id="newsSources" class="source-list"></div></article>
-      <p class="info">As manchetes são obtidas do Google Notícias no momento da solicitação. A síntese considera os títulos disponíveis; abra as fontes para ler os detalhes. O aplicativo não atualiza sozinho em segundo plano.</p>
+      <p class="info">As manchetes são consultadas diretamente no GDELT quando você solicita a atualização. Os links abrem as matérias originais. O aplicativo não atualiza sozinho em segundo plano.</p>
     </section>
 
     <section class="view" id="assistantView">
-      <h1 class="page-title">Converse com Nicko</h1><p class="page-desc">Seu assistente pessoal dentro do aplicativo. Converse, organize ideias, planeje tarefas e envie textos para analisar. Informações em tempo real dependem de fontes que você compartilhar.</p>
+      <h1 class="page-title">Converse com Nicko</h1><p class="page-desc">Seu assistente pessoal dentro do aplicativo. Converse, organize ideias, planeje tarefas e envie textos para analisar. Pedidos de notícias atuais consultam diretamente uma fonte externa de manchetes recentes.</p>
       <div class="assistant-toolbar"><span class="pill" id="assistantConnection">Conexão não configurada</span><button class="text-link" id="clearChat" type="button">Limpar conversa</button></div>
       <div class="chat-shell">
         <div class="chat-head"><div><strong style="font-size:12px">✦ Nicko Assistant</strong><div class="chat-state" id="chatState">Aguardando configuração do serviço de IA</div></div><button class="chat-btn" id="speakLast" type="button" title="Ouvir última resposta">🔊</button></div>
@@ -552,6 +552,53 @@ function renderFormattedText(container,text){
   flushParagraph();
 }
 function appendBubble(role,text,sources=[]){const row=document.createElement('div');row.className='bubble '+(role==='user'?'user':'assistant');renderFormattedText(row,text); $('chatFeed').append(row);if(sources.length){const wrap=document.createElement('div');wrap.className='assistant-sources';sources.slice(0,6).forEach(src=>{if(!src.url||!/^https:\/\//i.test(src.url))return;const a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='↗ '+(src.title||src.url);wrap.append(a)});if(wrap.childElementCount)$('chatFeed').append(wrap);} $('chatFeed').scrollTop=$('chatFeed').scrollHeight;}
+ async function fetchGdeltNewsClient(topic){
+  const terms={
+   geral:'Brasil sourcelang:Portuguese',
+   brasil:'Brasil sourcelang:Portuguese',
+   mundo:'(mundo OR internacional) sourcelang:Portuguese',
+   alagoas:'(Alagoas OR Maceió) sourcelang:Portuguese',
+   tecnologia:'(tecnologia OR inteligência artificial) sourcelang:Portuguese'
+  };
+  const query=terms[topic]||terms.geral;
+  const endpoint=new URL('https://api.gdeltproject.org/api/v2/doc/doc');
+  endpoint.searchParams.set('query',query);
+  endpoint.searchParams.set('mode','artlist');
+  endpoint.searchParams.set('format','json');
+  endpoint.searchParams.set('maxrecords','15');
+  endpoint.searchParams.set('sort','datedesc');
+  endpoint.searchParams.set('timespan',topic==='alagoas'?'7d':'24h');
+  const response=await fetch(endpoint.toString(),{headers:{'Accept':'application/json'}});
+  if(!response.ok)throw new Error('GDELT respondeu HTTP '+response.status+'.');
+  const raw=await response.text();
+  let data;
+  try{data=JSON.parse(raw);}catch{throw new Error('A fonte de notícias retornou uma resposta que não é JSON.');}
+  if(!Array.isArray(data.articles))throw new Error(data.error||data.message||'A fonte não retornou uma lista de matérias.');
+  const articles=data.articles.map(item=>{
+   let publishedAt='';
+   const digits=String(item.seendate||'').replace(/\D/g,'');
+   if(digits.length>=14){
+    const date=new Date(Date.UTC(Number(digits.slice(0,4)),Number(digits.slice(4,6))-1,Number(digits.slice(6,8)),Number(digits.slice(8,10)),Number(digits.slice(10,12)),Number(digits.slice(12,14))));
+    if(!Number.isNaN(date.getTime()))publishedAt=date.toISOString();
+   }
+   return {title:String(item.title||'').trim(),url:String(item.url||'').trim(),source:String(item.domain||item.sourcecountry||'').trim(),publishedAt};
+  }).filter(item=>item.title&&/^https:\/\//i.test(item.url));
+  if(!articles.length)throw new Error('A busca não encontrou manchetes recentes para esse tema. Tente outra categoria.');
+  const updatedAt=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Maceio',hour:'2-digit',minute:'2-digit'}).format(new Date());
+  return {articles,updatedAt,topic};
+ }
+ function newsBriefText(result){
+  const topicLabels={geral:'Destaques',brasil:'Brasil',mundo:'Mundo',alagoas:'Alagoas',tecnologia:'Tecnologia'};
+  return '**'+(topicLabels[result.topic]||'Notícias')+' — consultado às '+result.updatedAt+' (horário de Alagoas)**\n\n'+
+   result.articles.slice(0,12).map(item=>{
+    const date=item.publishedAt?new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Maceio',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}).format(new Date(item.publishedAt)):'';
+    return '- **'+item.title+'**'+(item.source?' — '+item.source:'')+(date?' · '+date:'');
+   }).join('\n')+
+   '\n\n*Manchetes recentes indexadas pelo GDELT. Abra as fontes para ler as matérias completas.*';
+ }
+ function newsSourceItems(result){
+  return result.articles.slice(0,12).map(item=>({title:(item.source?item.source+' — ':'')+item.title,url:item.url}));
+ }
  function normalizeShortcutText(value){return String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
  function isLocalTimeRequest(value){const t=normalizeShortcutText(value);return /\b(que horas (sao|e)|que hora (e|sao)|qual (e|eh) a hora|hora atual|horario atual|horario agora|hora agora|me diga a hora|me fala a hora)\b/.test(t);}
  function getLocalTimeReply(){const now=new Date();const time=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Maceio',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(now);const date=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Maceio',weekday:'long',day:'numeric',month:'long'}).format(now);return 'Agora são **'+time+'** em São Miguel dos Campos, Alagoas. 🌙\nHoje é '+date+'.';}
@@ -578,7 +625,8 @@ function appendBubble(role,text,sources=[]){const row=document.createElement('di
   try{
     let data;
     if(isCurrentNewsRequestClient(message)){
-      data=await callWorker('/api/news',{topic:detectNewsTopicClient(message)});
+      const news=await fetchGdeltNewsClient(detectNewsTopicClient(message));
+      data={reply:newsBriefText(news),sources:newsSourceItems(news)};
     }else{
       const history=chatHistory.slice(0,-1).slice(-10);
       data=await callWorker('/api/chat',{message,history});
@@ -611,7 +659,23 @@ function appendBubble(role,text,sources=[]){const row=document.createElement('di
  if(workerUrl&&accessCode){setConnection('Conexão configurada');}
  function setNewsTopic(topic){selectedNewsTopic=topic;document.querySelectorAll('[data-topic]').forEach(b=>b.classList.toggle('active',b.dataset.topic===topic));}
  document.querySelectorAll('[data-topic]').forEach(b=>b.addEventListener('click',()=>setNewsTopic(b.dataset.topic)));
- $('refreshNews').addEventListener('click',async()=>{if(!workerUrl||!accessCode){$('connectionSettings').open=true;switchView('assistantView');showToast('Configure a conexão inteligente para gerar notícias.');return;}const button=$('refreshNews');button.disabled=true;button.textContent='Preparando resumo…';$('newsDigest').textContent='Buscando informações recentes e conferindo fontes. Isso pode levar alguns segundos.';$('newsSources').innerHTML='';try{const data=await callWorker('/api/news',{topic:selectedNewsTopic});renderFormattedText($('newsDigest'),data.reply||'Nenhum resumo foi retornado.');const sources=data.sources||[];$('newsSources').innerHTML='';sources.slice(0,10).forEach(src=>{if(!src.url||!/^https:\/\//i.test(src.url))return;const a=document.createElement('a');a.className='source-link';a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=src.title||src.url;$('newsSources').append(a)});$('newsUpdated').textContent='Atualizado às '+new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit'}).format(new Date());}catch(e){const msg=e.message||'Falha inesperada.';$('newsDigest').textContent=/feed de notícias não respondeu|duas fontes de notícias falharam/i.test(msg)?'O Worker no Cloudflare ainda parece estar com uma versão antiga ou sem acesso às fontes de notícias. Publique a versão mais recente de cloudflare-worker.js no Cloudflare.':'Não foi possível gerar o resumo. '+msg;}finally{button.disabled=false;button.textContent='✦ Gerar resumo atualizado';}});
+ $('refreshNews').addEventListener('click',async()=>{
+  const button=$('refreshNews');button.disabled=true;button.textContent='Buscando manchetes…';
+  $('newsDigest').textContent='Consultando uma fonte de notícias recentes. Isso pode levar alguns segundos.';
+  $('newsSources').innerHTML='';
+  try{
+   const result=await fetchGdeltNewsClient(selectedNewsTopic);
+   renderFormattedText($('newsDigest'),newsBriefText(result));
+   newsSourceItems(result).forEach(src=>{
+    if(!src.url||!/^https:\/\//i.test(src.url))return;
+    const a=document.createElement('a');a.className='source-link';a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=src.title;$('newsSources').append(a);
+   });
+   $('newsUpdated').textContent='Atualizado às '+result.updatedAt;
+  }catch(e){
+   $('newsDigest').textContent='Não foi possível carregar as manchetes. '+(e.message||'Falha inesperada.');
+   $('newsUpdated').textContent='Falha na atualização';
+  }finally{button.disabled=false;button.textContent='✦ Gerar resumo atualizado';}
+});
  // PWA install prompt
  let deferredPrompt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('installBtn').textContent='↓'});
  $('installBtn').addEventListener('click',async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;}else{showToast('Use o menu do navegador e escolha “Adicionar à tela inicial”.')}});
