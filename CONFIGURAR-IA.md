@@ -36,11 +36,11 @@ A versão atual não precisa de `OPENAI_API_KEY` nem de `OPENAI_MODEL`. Se esses
 ## Recursos e limitações desta versão
 
 - `GET /health`: verifica o código de acesso e informa se o binding de IA existe.
-- `POST /api/chat`: conversa com o modelo Workers AI; quando a mensagem pede notícias ou manchetes atuais, consulta o feed RSS antes de gerar a resposta e retorna os links das fontes.
+- `POST /api/chat`: responde diretamente a perguntas sobre a hora local de Alagoas e consulta manchetes recentes (GDELT, com Google Notícias como alternativa) quando a mensagem pede notícias; retorna links das fontes.
 - `POST /api/news`: consulta manchetes do Google Notícias por tema (geral, Brasil, mundo, Alagoas ou tecnologia), organiza uma síntese com Workers AI e devolve links das fontes.
-- O boletim de notícias usa manchetes de um feed RSS; a síntese é baseada nos títulos disponíveis, não na leitura integral de cada matéria. Os links das fontes são apresentados para conferência.
+- O boletim de notícias usa a busca de artigos recentes do GDELT (janela de 24 horas ou 7 dias para Alagoas), com Google Notícias como alternativa. A síntese é baseada nos títulos disponíveis, não na leitura integral das matérias.
 - A pesquisa de manchetes ocorre ao solicitar notícias no chat ou ao tocar em “Gerar resumo atualizado”; não há atualização automática em segundo plano.
-- As horas de saudação, data e agenda exibidas no app usam explicitamente o fuso `America/Maceio`.
+- As horas de saudação, data e agenda exibidas no app, assim como respostas de hora no chat, usam explicitamente o fuso `America/Maceio`.
 - O histórico da conversa fica na memória da página e não é salvo como memória permanente.
 - A lista de tarefas fica no navegador/aparelho; o Worker não acessa essa lista.
 - O serviço não monitora o celular, não executa ações em segundo plano e não sincroniza o Google Agenda.
