@@ -42,7 +42,7 @@ async function askAI(env, instructions, messages, maxTokens = 1200) {
 
 function decodeXml(value = "") {
   return String(value)
-    .replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, "$1")
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
     .replace(/<[^>]*>/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
@@ -53,7 +53,7 @@ function decodeXml(value = "") {
       const point = code[0].toLowerCase() === "x" ? parseInt(code.slice(1), 16) : parseInt(code, 10);
       try { return String.fromCodePoint(point); } catch { return ""; }
     })
-    .replace(/\\s+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -63,7 +63,7 @@ function readXmlTag(block, tag) {
 }
 
 function parseNewsRss(xml, limit = 12) {
-  const matches = [...String(xml).matchAll(/<item\\b[^>]*>([\\s\\S]*?)<\\/item>/gi)];
+  const matches = [...String(xml).matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)];
   return matches.map(match => {
     const block = match[1];
     const title = readXmlTag(block, "title");
@@ -71,7 +71,7 @@ function parseNewsRss(xml, limit = 12) {
     const publishedAt = readXmlTag(block, "pubDate");
     const source = readXmlTag(block, "source");
     return { title, url, publishedAt, source };
-  }).filter(item => item.title && /^https:\\/\\//i.test(item.url)).slice(0, limit);
+  }).filter(item => item.title && /^https:\/\//i.test(item.url)).slice(0, limit);
 }
 
 const BASE_INSTRUCTIONS =
@@ -172,20 +172,20 @@ export default {
           (index + 1) + ". " + item.title +
           (item.source ? " — Fonte: " + item.source : "") +
           (item.publishedAt ? " — Publicado em: " + item.publishedAt : "")
-        ).join("\\n");
+        ).join("\n");
 
         let reply;
         try {
           const summary = await askAI(
             env,
             "Você é o editor de notícias do Nicko. Organize as manchetes fornecidas em português do Brasil, em até 4 tópicos curtos. Explique somente o que é possível concluir pelas manchetes. Não invente detalhes, causas, números, citações ou consequências que não estejam nelas. Deixe claro que o boletim é um panorama das manchetes, não a leitura integral das matérias. Termine recomendando abrir os links das fontes para detalhes.",
-            [{ role: "user", content: "Tema selecionado: " + (topic || "geral") + "\\nManchetes coletadas no Google Notícias:\\n" + headlines }],
+            [{ role: "user", content: "Tema selecionado: " + (topic || "geral") + "\nManchetes coletadas no Google Notícias:\n" + headlines }],
             850
           );
           reply = summary.reply;
         } catch (error) {
-          reply = "Encontrei estas manchetes recentes. A síntese por IA não ficou disponível agora, mas você pode abrir cada fonte abaixo:\\n\\n" +
-            articles.map(item => "- " + item.title).join("\\n");
+          reply = "Encontrei estas manchetes recentes. A síntese por IA não ficou disponível agora, mas você pode abrir cada fonte abaixo:\n\n" +
+            articles.map(item => "- " + item.title).join("\n");
         }
 
         return json({
