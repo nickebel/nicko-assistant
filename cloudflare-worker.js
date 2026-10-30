@@ -39,6 +39,41 @@ async function askAI(env, instructions, messages, maxTokens = 1200) {
   return { reply, sources: [] };
 }
 
+
+function decodeXml(value = "") {
+  return String(value)
+    .replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, "$1")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;|&#39;/g, "'")
+    .replace(/&#(x[0-9a-f]+|[0-9]+);/gi, (_, code) => {
+      const point = code[0].toLowerCase() === "x" ? parseInt(code.slice(1), 16) : parseInt(code, 10);
+      try { return String.fromCodePoint(point); } catch { return ""; }
+    })
+    .replace(/\\s+/g, " ")
+    .trim();
+}
+
+function readXmlTag(block, tag) {
+  const match = block.match(new RegExp("<" + tag + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + tag + ">", "i"));
+  return match ? decodeXml(match[1]) : "";
+}
+
+function parseNewsRss(xml, limit = 12) {
+  const matches = [...String(xml).matchAll(/<item\\b[^>]*>([\\s\\S]*?)<\\/item>/gi)];
+  return matches.map(match => {
+    const block = match[1];
+    const title = readXmlTag(block, "title");
+    const url = readXmlTag(block, "link");
+    const publishedAt = readXmlTag(block, "pubDate");
+    const source = readXmlTag(block, "source");
+    return { title, url, publishedAt, source };
+  }).filter(item => item.title && /^https:\\/\\//i.test(item.url)).slice(0, limit);
+}
+
 const BASE_INSTRUCTIONS =
   "Você é o Nicko Assistant, o assistente pessoal digital do usuário. Converse sempre em português do Brasil, salvo quando o usuário pedir outro idioma.\n" +
   "PERSONALIDADE: seja próximo, gentil, natural, paciente e confiável. Use linguagem simples e informal na medida certa, sem gírias forçadas. Use poucos emojis, apenas quando combinarem. Não chame o usuário pelo nome em toda resposta.\n" +
@@ -105,9 +140,61 @@ export default {
       }
 
       if (url.pathname === "/api/news") {
+        const topic = String(body.topic || "geral").toLowerCase();
+        const searches = {
+          geral: "",
+          brasil: "Brasil when:2d",
+          mundo: "mundo internacional when:2d",
+          alagoas: "Alagoas OR Maceió when:7d",
+          tecnologia: "tecnologia OR inteligência artificial when:2d",
+        };
+        const query = Object.prototype.hasOwnProperty.call(searches, topic) ? searches[topic] : searches.geral;
+        const feedUrl = new URL(query ? "https://news.google.com/rss/search" : "https://news.google.com/rss");
+        if (query) feedUrl.searchParams.set("q", query);
+        feedUrl.searchParams.set("hl", "pt-BR");
+        feedUrl.searchParams.set("gl", "BR");
+        feedUrl.searchParams.set("ceid", "BR:pt-419");
+
+        const feedResponse = await fetch(feedUrl.toString(), {
+          headers: { "Accept": "application/rss+xml, application/xml, text/xml" },
+        });
+        if (!feedResponse.ok) throw new Error("Não consegui acessar o feed de notícias agora. Tente novamente.");
+        const xml = await feedResponse.text();
+        const articles = parseNewsRss(xml, 12);
+        if (!articles.length) {
+          return json({
+            reply: "Não encontrei manchetes para esse tema neste momento. Tente outra categoria ou atualize novamente daqui a pouco.",
+            sources: [],
+          });
+        }
+
+        const headlines = articles.map((item, index) =>
+          (index + 1) + ". " + item.title +
+          (item.source ? " — Fonte: " + item.source : "") +
+          (item.publishedAt ? " — Publicado em: " + item.publishedAt : "")
+        ).join("\\n");
+
+        let reply;
+        try {
+          const summary = await askAI(
+            env,
+            "Você é o editor de notícias do Nicko. Organize as manchetes fornecidas em português do Brasil, em até 4 tópicos curtos. Explique somente o que é possível concluir pelas manchetes. Não invente detalhes, causas, números, citações ou consequências que não estejam nelas. Deixe claro que o boletim é um panorama das manchetes, não a leitura integral das matérias. Termine recomendando abrir os links das fontes para detalhes.",
+            [{ role: "user", content: "Tema selecionado: " + (topic || "geral") + "\\nManchetes coletadas no Google Notícias:\\n" + headlines }],
+            850
+          );
+          reply = summary.reply;
+        } catch (error) {
+          reply = "Encontrei estas manchetes recentes. A síntese por IA não ficou disponível agora, mas você pode abrir cada fonte abaixo:\\n\\n" +
+            articles.map(item => "- " + item.title).join("\\n");
+        }
+
         return json({
-          reply: "A pesquisa automática de notícias ainda não está ativada nesta versão. Para não inventar manchetes, o Nicko não vai apresentar notícias como se fossem atuais. Envie um link ou copie o texto de uma matéria no chat para que eu possa resumir e explicar.",
-          sources: [],
+          reply,
+          sources: articles.map(item => ({
+            title: (item.source ? item.source + " — " : "") + item.title,
+            url: item.url,
+            publishedAt: item.publishedAt,
+          })),
         });
       }
 
