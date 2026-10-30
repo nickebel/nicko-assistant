@@ -8,7 +8,7 @@ Aplicativo web instalável (PWA) em português, pensado para celular e tablet.
 - Assistente de conversa com Cloudflare Workers AI.
 - Respostas formatadas com negrito, itálico, títulos e listas.
 - Leitura das respostas em voz alta e entrada por voz, quando o navegador oferece suporte.
-- Área de notícias que pode resumir textos e links enviados pelo usuário; pesquisa automática ainda não está ativada.
+- Área de notícias com manchetes do Google Notícias por tema e síntese em português usando Workers AI.
 
 ## Configurar a inteligência artificial
 O projeto usa Cloudflare Workers AI por meio de um Worker. Não é necessária uma chave da API da OpenAI. Configure o binding Workers AI com o nome `AI` e o secret `NICKO_ACCESS_CODE`.
@@ -17,7 +17,7 @@ Consulte [CONFIGURAR-IA.md](./CONFIGURAR-IA.md) para o passo a passo.
 
 ## Limitações
 - O uso de Workers AI está sujeito às cotas e aos limites da conta Cloudflare.
-- A pesquisa automática na web e a geração de notícias ao vivo ainda não estão ativadas.
+- A área de notícias consulta um feed RSS do Google Notícias sob demanda; a síntese é baseada nas manchetes e os links permitem conferir as matérias completas.
 - A agenda é um resumo dos horários informados; não sincroniza diretamente com o Google Agenda.
 - As tarefas ficam salvas somente neste navegador/aparelho.
 - O histórico do chat existe apenas enquanto a página está aberta; não há memória permanente.
